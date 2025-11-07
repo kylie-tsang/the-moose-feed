@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Moose A Day</title>
+  <script src="https://cdn.jsdelivr.net/npm/vue@3/dist/vue.global.js"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body>
+  <div id="app">
+    <div class="min-h-screen bg-gradient-to-br from-pink-100 via-purple-100 to-blue-100 p-4 flex items-center justify-center">
+      <div class="max-w-2xl w-full">
+        <div class="bg-white rounded-3xl shadow-2xl overflow-hidden">
+          <!-- Header -->
+          <div class="bg-gradient-to-r from-purple-500 to-pink-500 p-6 text-white text-center">
+            <div class="flex items-center justify-center gap-2 mb-2">
+              <svg class="w-7 h-7 fill-current" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
+              </svg>
+              <h1 class="text-3xl font-bold">Moose A Day</h1>
+              <svg class="w-7 h-7 fill-current" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
+              </svg>
+            </div>
+            <p class="text-purple-100">Your daily dose of Moose! 🐾</p>
+          </div>
+
+          <!-- Content -->
+          <div class="p-6">
+            <!-- Loading State -->
+            <div v-if="loading" class="text-center py-12">
+              <div class="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-purple-500"></div>
+              <p class="mt-4 text-gray-600">Moose is on his way...his legs are short...please hold!</p>
+            </div>
+
+            <!-- Error State -->
+            <div v-if="error" class="text-center py-12">
+              <p class="text-red-500 mb-4">⚠️ {{ error }}</p>
+              <div class="bg-gray-100 p-4 rounded-lg text-left text-sm">
+                <p>Moose is busy at the moment, please come back later!</p>
+              </div>
+              <button
+                @click="fetchContent"
+                class="mt-4 px-6 py-2 bg-purple-500 text-white rounded-full hover:bg-purple-600 transition"
+              >
+                Try Again
+              </button>
+            </div>
+
+            <!-- Success State -->
+            <div v-if="!loading && !error && photo" class="space-y-6">
+              <!-- Photo -->
+              <div class="rounded-2xl overflow-hidden shadow-lg">
+                <img
+                  :src="photo.url"
+                  alt="Moose will be here shortly"
+                  class="w-full h-auto object-cover"
+                />
+              </div>
+
+              <!-- Dad Joke -->
+              <div class="bg-gradient-to-r from-yellow-50 to-orange-50 p-6 rounded-2xl border-2 border-yellow-200">
+                <p class="text-lg font-semibold text-gray-800 mb-2">(Dog) Dad Joke of the Day:</p>
+                <p v-if="jokeLoading" class="text-gray-600 italic">Hilarity incoming...</p>
+                <p v-else class="text-gray-700 italic">{{ joke }}</p>
+              </div>
+
+              <!-- Refresh Button -->
+              <button
+                @click="fetchContent"
+                class="w-full py-4 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-2xl font-semibold hover:from-purple-600 hover:to-pink-600 transition shadow-lg flex items-center justify-center gap-2"
+              >
+                <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M23 4v6h-6M1 20v-6h6M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
+                </svg>
+                I want more!
+              </button>
+            </div>
+          </div>
+
+          <!-- Footer -->
+          <div class="bg-gray-50 px-6 py-4 text-center text-sm text-gray-600">
+            Made with 💜 by a Goose aunt
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    //   import {Cloudinary} from "@cloudinary/url-gen";
+    const { createApp } = Vue;
+    // Import the Cloudinary class.
+
+    createApp({
+      data() {
+        return {
+          // ⚙️ CONFIGURATION - Replace with your Cloudinary details
+          CLOUDINARY_CLOUD_NAME: 'dzuciyiqf', // e.g., 'demo'
+          CLOUDINARY_FOLDER: 'meese',
+          
+          photo: null,
+          joke: '',
+          loading: true,
+          jokeLoading: false,
+          error: null,
+          test: '',
+        };
+      },
+      mounted() {
+        this.fetchContent();
+      },
+      methods: {
+        async fetchContent() {
+          this.loading = true;
+          this.error = null;
+
+          try {
+            // Fetch both photo and joke in parallel
+            await Promise.all([
+              this.fetchRandomPhoto(),
+              this.fetchDadJoke()
+            ]);
+          } catch (err) {
+            this.error = err.message;
+          } finally {
+            delay = 1000; // 1 second delay for the image to load (takes longer than the joke)
+            this.loading = false;
+          }
+        },
+
+        async fetchRandomPhoto() {
+          try {
+            // Fetch list of images from Cloudinary folder
+            const response = await fetch(
+              `https://res.cloudinary.com/${this.CLOUDINARY_CLOUD_NAME}/image/list/${this.CLOUDINARY_FOLDER}.json`
+            );
+
+            if (!response.ok) {
+              throw new Error('Failed to fetch photos. Check your Cloudinary settings.');
+            }
+
+            const data = await response.json();
+
+            if (!data.resources || data.resources.length === 0) {
+              throw new Error('No photos found in the folder.');
+            }
+
+            // Pick a random photo
+            const randomPhoto = data.resources[Math.floor(Math.random() * data.resources.length)];
+
+            // Construct the image URL (optimized for web)
+            const imageUrl = `https://res.cloudinary.com/${this.CLOUDINARY_CLOUD_NAME}/image/upload/w_800,q_auto,f_auto/${randomPhoto.public_id}.jpg`;
+            
+            this.photo = {
+              url: imageUrl,
+              id: randomPhoto.public_id
+            };
+          } catch (err) {
+            this.error = err;
+            throw new Error(`Photo error: ${err.message}`);
+          }
+        },
+
+        async fetchDadJoke() {
+          this.jokeLoading = true;
+          try {
+            const response = await fetch('https://icanhazdadjoke.com/', {
+              headers: {
+                'Accept': 'application/json'
+              }
+            });
+
+            if (!response.ok) {
+              throw new Error('Failed to fetch dad joke');
+            }
+
+            const data = await response.json();
+            this.joke = data.joke;
+          } catch (err) {
+            this.error = err;
+            console.error('Failed to fetch dad joke:', err);
+          } finally {
+            this.jokeLoading = false;
+          }
+        }
+      }
+    }).mount('#app');
+  </script>
+</body>
+</html>
